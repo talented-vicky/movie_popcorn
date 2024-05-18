@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PropTypes from "prop-types";
 
 const tempMovieData = [
   {
@@ -218,6 +219,7 @@ function WatchedData({watched}){
   )
 }
 function WatchedInfo({movie}) {
+  const [rating, setRating] = useState("");
   return (
     <li>
           <img src={movie.Poster} alt={`${movie.Title} poster`} />
@@ -236,14 +238,58 @@ function WatchedInfo({movie}) {
               <span>{movie.runtime} min</span>
             </p>
           </div>
+          <div>
+            {/* <Star setExtRating={setRating}></Star> */}
+            <Star setExtRating={setRating}></Star>
+            <p> you rated this a {rating === "" ? 0 : rating}</p>
+            {/* <Star maxRate={7} initRate={4} noRateIcon={"🕳"} rateIcon={"💫"}></Star> */}
+          </div>
         </li>
   )
 }
-// function Span({movie, chil}){
-//   return (
-//     <p>
-//       <span>⭐️</span>
-//       <span>{movie.imdbRating}</span>
-//     </p>
-//   )
-// }
+const divBox = {
+  display: "flex",
+  alignItems: "center",
+  gap: "12px"
+}
+const starBox = {
+  display: "flex",
+  gap: "3.5px"
+}
+const starStyle = {
+  cursor: "pointer"
+}
+
+
+Star.propTypes = {
+  maxRate: PropTypes.number,
+  noRateIcon: PropTypes.string,
+  setExtRating: PropTypes.func
+}
+
+function Star({ maxRate = 5, initRate = 2, noRateIcon="🤍", rateIcon="💖", setExtRating}) {
+  const [rate, setRate] = useState(initRate)
+  const [tempRate, setTempRate] = useState("")
+  
+  return (
+    <div style={divBox}>
+      <div style={starBox}>
+        {Array.from({length: maxRate}, (_, ind) => (
+          <span style={starStyle} 
+            onMouseEnter={() => setTempRate(ind + 1)}
+            onMouseLeave={() => setTempRate(0)}
+            onClick={() => {
+              setRate(ind + 1)
+              setExtRating(ind + 1)
+            }}
+            > {tempRate 
+              ? (tempRate >= ind + 1 ? rateIcon  : noRateIcon)
+              : (rate >= ind + 1 ? rateIcon  : noRateIcon)
+            }
+          </span>
+        ))}
+      </div>
+      <p> {tempRate || rate || ""}</p>
+    </div>
+  ) 
+}
