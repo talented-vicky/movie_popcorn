@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 
 const tempMovieData = [
@@ -74,6 +74,7 @@ export default function App() {
         <MoviesBox>
           <>
             <Summary watched={watched}></Summary>
+            <ReadMore></ReadMore>
             <WatchedData watched={watched}></WatchedData>
           </>
         </MoviesBox>
@@ -292,4 +293,88 @@ function Star({ maxRate = 5, initRate = 2, noRateIcon="🤍", rateIcon="💖", s
       <p> {tempRate || rate || ""}</p>
     </div>
   ) 
+}
+
+function ReadMore() {
+  return (
+    <div>
+      <ExpandingText
+        collapsedNumWords={20}
+        expandButtonText="Show more"
+        collapseButtonText="Read Less"
+        buttonColor="#ffff"
+      >
+        Space travel requires some seriously amazing technology and
+        collaboration between countries, private companies, and international
+        space organizations. And while it's not always easy (or cheap), the
+        results are out of this world. Think about the first time humans stepped
+        foot on the moon or when rovers were sent to roam around on Mars.
+      </ExpandingText>
+      <ExpandingText
+        collapsedNumWords={10}
+        expandButtonText="More"
+        collapseButtonText="Less"
+        buttonColor="#ff6622"
+      >
+        Space travel is the ultimate adventure! Imagine soaring past the stars
+        and exploring new worlds. It's the stuff of dreams and science fiction,
+        but believe it or not, space travel is a real thing. Humans and robots
+        are constantly venturing out into the cosmos to uncover its secrets and
+        push the boundaries of what's possible.
+      </ExpandingText>
+
+
+      <ExpandingText 
+        expanded={true} className="box"
+      >
+        Space missions have given us incredible insights into our universe and
+        have inspired future generations to keep reaching for the stars. Space
+        travel is a pretty cool thing to think about. Who knows what we'll
+        discover next!
+      </ExpandingText>
+    </div>
+  )
+}
+
+
+function ExpandingText({collapsedNumWords, expandButtonText, collapseButtonText, buttonColor, expanded, children}) {
+  const [exp, setExp] = useState(true)
+  const [text, setText] = useState(children)
+
+  const btnStyle = {
+    color: buttonColor,
+    background: "none",
+    border: "none",
+    fontSize: "10px",
+    cursor: "pointer",
+    marginLeft: "3px"
+  }
+
+  function altTextContent(wholeText, limit) {
+    if(exp) {
+      const shortened = wholeText.split(" ").slice(0, limit).join(" ") + "..."
+      setText(shortened);
+    } else {
+      setText(children)
+    }
+  }
+
+  function toggleBtn () {
+    setExp(!exp)
+  }
+  
+  useEffect(() => {
+    altTextContent(children, collapsedNumWords)
+  })
+
+  return (    
+    <div >  
+      <span> {expanded ? children : text } </span>
+      <button style={btnStyle} onClick={() => {
+        altTextContent(children, collapsedNumWords)
+        toggleBtn()
+      }}> {exp ? expandButtonText : collapseButtonText} 
+      </button>
+    </div>
+  )
 }
