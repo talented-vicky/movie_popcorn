@@ -51,9 +51,35 @@ const tempWatchedData = [
 const average = (arr) =>
   arr.reduce((acc, cur, i, arr) => acc + cur / arr.length, 0);
 
+const api_key = "406a40fb";
+const search_title = "games";
+const category = "movie";
+
 export default function App() {
-  const [movies, setMovies] = useState(tempMovieData);
+  const [movies, setMovies] = useState([]);
   const [watched, setWatched] = useState(tempWatchedData);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // render logic is basically what gets called when a component first mounts
+  // hence you should never set state in render logic (infinite request loop)
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true)
+      const data = await fetch(`http://www.omdbapi.com/?apikey=${api_key}&s=${search_title}&type=${category}`)
+      const fmtData = await data.json()
+      setMovies(fmtData.Search)
+      console.log(fmtData)
+      setIsLoading(false)
+    }
+     
+    fetchData()
+  }, [])
+  // asides using "event handlers", another way to use a side effect (an interaction 
+  // btwn a component and real world data, it should never be placed in a 
+  // render logic tho) is via "useEffect", which helps register it after it has 
+  // been painted on the screen and is used when we want to load data 
+  // immediately a component mounts -- the array argument ensures this
+  
 
   return (
     <>
@@ -68,7 +94,11 @@ export default function App() {
       {/* MOVIE_BODY */}
       <MovieBody >
         <MoviesBox>
-          <MovieData movies={movies}></MovieData>
+          {
+            isLoading 
+            ? <LoadingData></LoadingData>
+            : <MovieData movies={movies}></MovieData>
+          }
         </MoviesBox>
         
         <MoviesBox>
@@ -93,6 +123,7 @@ function MovieNav({children}) {
     </nav>
   )
 }
+
 // function MovieNav({movies}) {
 //   return (
 //     <nav className="nav-bar">
@@ -102,6 +133,7 @@ function MovieNav({children}) {
 //     </nav>
 //   )
 // }
+
 
 // movie_navigation_component
 // ******
@@ -132,7 +164,6 @@ function SearchResult({movies}) {
     </p>
   )
 }
-
 
 
 // movie_body
@@ -168,6 +199,11 @@ function MovieData({movies}) {
         <MovieInfo movie={movie} key={movie.imdbID}></MovieInfo>
       ))}
     </ul>
+  )
+}
+function LoadingData(){
+  return (
+    <p className="loader">Loading...</p>
   )
 }
 function MovieInfo({movie}) {
@@ -322,7 +358,6 @@ function ReadMore() {
         are constantly venturing out into the cosmos to uncover its secrets and
         push the boundaries of what's possible.
       </ExpandingText>
-
 
       <ExpandingText 
         expanded={true} className="box"
