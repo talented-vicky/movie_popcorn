@@ -52,28 +52,56 @@ const average = (arr) =>
   arr.reduce((acc, cur, i, arr) => acc + cur / arr.length, 0);
 
 const api_key = "406a40fb";
-const search_title = "games";
-const category = "movie";
 
 export default function App() {
   const [movies, setMovies] = useState([]);
   const [watched, setWatched] = useState(tempWatchedData);
   const [isLoading, setIsLoading] = useState(false);
+  const [err, setErr] = useState("");
+  const [query, setQuery] = useState("");
   
+  // const search_title = query; //constantine
+
   // render logic is basically what gets called when a component first mounts
   // hence you should never set state in render logic (infinite request loop)
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true)
-      const data = await fetch(`http://www.omdbapi.com/?apikey=${api_key}&s=${search_title}&type=${category}`)
-      const fmtData = await data.json()
-      setMovies(fmtData.Search)
-      console.log(fmtData)
-      setIsLoading(false)
+      try {
+        setIsLoading(true)
+        setErr("") // ensuring I clean up previously displayed error from the UI
+
+        const data = await fetch(`http://www.omdbapi.com/?apikey=${api_key}&s=${query}`)
+        if(!data.ok){
+          throw new Error("Network Error")
+        }
+
+        const jsonData = await data.json()
+        if(jsonData.Response === "False"){
+          // throw new Error("Movie Not Found")
+          throw new Error(jsonData.Error) // passing actual msg rather than hard coded error
+        }
+
+        setMovies(jsonData.Search)
+      } catch (newErr) {
+        console.error(newErr.message) 
+        // this is me catching whatever error string I previously threw
+        setErr(newErr.message)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    if(query.length < 3){
+      setMovies([])
+      setErr("")
+      return
     }
      
     fetchData()
-  }, [])
+   }, [query]) // runs when there's an update on array value ("query" in this case)
+  // }, []) // runs only on mount
+  // }) // runs on every render (not a good practice)
+
   // asides using "event handlers", another way to use a side effect (an interaction 
   // btwn a component and real world data, it should never be placed in a 
   // render logic tho) is via "useEffect", which helps register it after it has 
@@ -87,18 +115,16 @@ export default function App() {
       {/* MOVIE_NAVIGATION */}
       <MovieNav>
         <Logo></Logo>
-        <Search></Search>
+        <Search query={query} setQuery={setQuery}></Search>
         <SearchResult movies={movies}></SearchResult>
       </MovieNav>
       
       {/* MOVIE_BODY */}
       <MovieBody >
         <MoviesBox>
-          {
-            isLoading 
-            ? <LoadingData></LoadingData>
-            : <MovieData movies={movies}></MovieData>
-          }
+          { isLoading && <LoadingData></LoadingData> }
+          {  err && <ErrorPage msg={err}></ErrorPage> }
+          { !isLoading && !err && <MovieData movies={movies}></MovieData>}
         </MoviesBox>
         
         <MoviesBox>
@@ -145,8 +171,7 @@ function Logo(){
         </div>
   )
 }
-function Search() {
-  const [query, setQuery] = useState("");
+function Search({query, setQuery}) {
   return (
     <input
           className="search"
@@ -205,6 +230,11 @@ function LoadingData(){
   return (
     <p className="loader">Loading...</p>
   )
+}
+function ErrorPage({msg}) {
+  return <div className="error">
+    <span> {msg} </span>
+  </div>
 }
 function MovieInfo({movie}) {
   return (
