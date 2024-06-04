@@ -1,28 +1,6 @@
 import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 
-const tempWatchedData = [
-  {
-    imdbID: "tt1375666",
-    Title: "Inception",
-    Year: "2010",
-    Poster:
-      "https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_SX300.jpg",
-    runtime: 148,
-    imdbRating: 8.8,
-    userRating: 10,
-  },
-  {
-    imdbID: "tt0088763",
-    Title: "Back to the Future",
-    Year: "1985",
-    Poster:
-      "https://m.media-amazon.com/images/M/MV5BZmU0M2Y1OGUtZjIxNi00ZjBkLTg1MjgtOWIyNThiZWIwYjRiXkEyXkFqcGdeQXVyMTQxNzMzNDI@._V1_SX300.jpg",
-    runtime: 116,
-    imdbRating: 8.5,
-    userRating: 9,
-  },
-];
 
 const average = (arr) =>
   arr.reduce((acc, cur, i, arr) => acc + cur / arr.length, 0);
@@ -31,7 +9,6 @@ const api_key = "406a40fb";
 
 export default function App() {
   const [movies, setMovies] = useState([]);
-  // const [watched, setWatched] = useState(tempWatchedData);
   const [watched, setWatched] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [err, setErr] = useState("");
@@ -47,15 +24,12 @@ export default function App() {
   }
 
   function handleAddWatched(movie) {
-    const AddedMov = watched.find(mov => mov.imdbID === movie.imdbID)
-    if(AddedMov){
-      console.log("Movie already added to watched list")
-      return
-    }
     setWatched(watched => [...watched, movie])
-    setMovieId(null)
   }
 
+  function handleRemoveWatched(id){
+    setWatched(watched => watched.filter(movie => movie.imdbID !== id))
+  }
   // render logic is basically what gets called when a component first mounts
   // hence you should never set state in render logic (infinite request loop)
   useEffect(() => {
@@ -123,7 +97,7 @@ export default function App() {
         
         <MoviesBox>
           { movieId 
-          ? <MovieDetails id={movieId} 
+          ? <MovieDetails id={movieId} watched={watched}
               onCloseMovie={handleCloseMovie}
               onAddWatched={handleAddWatched}
             >
@@ -132,7 +106,11 @@ export default function App() {
             <>
               <Summary watched={watched}></Summary>
               {/* <ReadMore></ReadMore> */}
-              <WatchedData watched={watched}></WatchedData>
+              <WatchedData 
+                watched={watched}
+                onRemoveWatched={handleRemoveWatched}
+              >
+              </WatchedData>
             </>
           }
         </MoviesBox>
@@ -228,12 +206,18 @@ function ErrorPage({msg}) {
     <span> {msg} </span>
   </div>
 }
-function MovieDetails({id, onCloseMovie, onAddWatched}) {
+function MovieDetails({id, onCloseMovie, onAddWatched, watched}) {
   const [movie, setMovie] = useState({})
   const [isLoading, setIsLoading] = useState(false)
+  const [userRating, setUserRating] = useState("")
 
-  const { Title, Genre, Plot, Poster, Released, 
+  const { imdbID, Title, Genre, Plot, Poster, Released, 
     Runtime, imdbRating, Actors, Director } = movie
+
+  const watchedMovie = watched.find(movie => movie.imdbID === id)
+  const currRating = watchedMovie?.userRating
+  // optional chaining cause there may exist no watchedMovie hence reading 
+  // "userRating of undefined" error
 
   useEffect(() => {
     const LoadMovieDetails = async () => {
@@ -257,6 +241,17 @@ function MovieDetails({id, onCloseMovie, onAddWatched}) {
     LoadMovieDetails()
   }, [id]) 
 
+  function addMovie() {
+    
+    const newMovie = {
+      imdbID, Title, Genre, Plot, Poster, Released, 
+      Runtime, imdbRating, Actors, Director, userRating
+    }
+
+    onAddWatched(newMovie)
+    onCloseMovie()
+  }
+
   return (
     <div className="details">
       {
@@ -273,11 +268,16 @@ function MovieDetails({id, onCloseMovie, onAddWatched}) {
               <p> {imdbRating}⭐ IMDB Rating`</p>
             </div>
           </header>
-
+ 
           <section>
             <div className="rating">
-              <Star initRate={0} maxRate={10} setExtRating={() => {}}></Star>
-              <button onClick={() => onAddWatched(movie)}> ➕ Add to List </button>
+              { watchedMovie ? <p> You rated this movie 🌟{currRating}</p>
+                  : 
+                  <>
+                    <Star initRate={0} maxRate={10} setExtRating={setUserRating}></Star>
+                    { userRating && <button className="btn-add" onClick={addMovie}> + Add to List </button> }                  
+                  </>
+              }
             </div>
             <p> {Plot} </p>
             <p> Actors: {Actors}</p>
@@ -314,31 +314,35 @@ function Summary({watched}){
                   </p>
                   <p>
                     <span>⭐️</span>
-                    <span>{avgImdbRating}</span>
+                    <span>{avgImdbRating.toFixed(2)}</span>
                   </p>
                   <p>
                     <span>🌟</span>
-                    <span>{avgUserRating}</span>
+                    <span>{avgUserRating.toFixed(2)}</span>
                   </p>
                   <p>
                     <span>⏳</span>
-                    <span>{avgRuntime} min</span>
+                    <span>{avgRuntime.toFixed(2)} min</span>
                   </p>
                 </div>
               </div>
   )
 }
-function WatchedData({watched}){
+function WatchedData({watched, onRemoveWatched}){
   return (
     <ul className="list">
       {watched.map((movie) => (
-        <WatchedInfo movie={movie} key={movie.imdbID}></WatchedInfo>
+        <WatchedInfo 
+          movie={movie} 
+          key={movie.imdbID}
+          onRemoveWatched={onRemoveWatched}
+        >
+        </WatchedInfo>
       ))}
     </ul>
   )
 }
-function WatchedInfo({movie}) {
-  // const [rating, setRating] = useState("");
+function WatchedInfo({movie, onRemoveWatched}) {
   return (
     <li>
           <img src={movie.Poster} alt={`${movie.Title} poster`} />
@@ -347,7 +351,7 @@ function WatchedInfo({movie}) {
             <p>
             <span>⭐️</span>
             <span>{movie.imdbRating}</span>
-          </p>
+            </p>
             <p>
               <span>🌟</span>
               <span>{movie.userRating}</span>
@@ -357,10 +361,10 @@ function WatchedInfo({movie}) {
               <span>{movie.Runtime}</span>
             </p>
           </div>
-          <div>
-            {/* <Star setExtRating={setRating}></Star>
-            <p> you rated this a {rating === "" ? 0 : rating}</p> */}
-          </div>
+          <button 
+            className="btn-delete"
+            onClick={() => onRemoveWatched(movie.imdbID)}> x 
+          </button>
         </li>
   )
 }
@@ -384,7 +388,7 @@ Star.propTypes = {
   setExtRating: PropTypes.func
 }
 
-function Star({ maxRate = 5, initRate = 2, noRateIcon="🤍", rateIcon="💖", setExtRating={}}) {
+function Star({ maxRate = 5, initRate = 2, noRateIcon="🤍", rateIcon="💖", setExtRating}) {
   const [rate, setRate] = useState(initRate)
   const [tempRate, setTempRate] = useState("")
   
