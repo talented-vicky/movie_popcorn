@@ -33,12 +33,17 @@ export default function App() {
   // render logic is basically what gets called when a component first mounts
   // hence you should never set state in render logic (infinite request loop)
   useEffect(() => {
+    const ctrl = new AbortController();
+
     const fetchData = async () => {
       try {
         setIsLoading(true)
         setErr("") // ensuring I clean up previously displayed error from the UI
 
-        const data = await fetch(`http://www.omdbapi.com/?apikey=${api_key}&s=${query}`)
+        const data = await fetch(
+          `http://www.omdbapi.com/?apikey=${api_key}&s=${query}`,
+          {signal: ctrl.signal}
+        )
         if(!data.ok){
           throw new Error("Network Error")
         }
@@ -50,10 +55,13 @@ export default function App() {
         }
 
         setMovies(jsonData.Search)
+        setErr("")
       } catch (newErr) {
-        console.error(newErr.message) 
-        // this is me catching whatever error string I previously threw
-        setErr(newErr.message)
+        if(newErr.name !== "AbortError"){
+          console.error(newErr.message) 
+          // this is me catching whatever error string I previously threw
+          setErr(newErr.message)
+        }
       } finally {
         setIsLoading(false)
       }
@@ -65,6 +73,7 @@ export default function App() {
       return
     }
      
+    handleCloseMovie()
     fetchData()
    }, [query]) // runs when there's an update on array value ("query" in this case)
   // }, []) // runs only on mount
@@ -219,30 +228,57 @@ function MovieDetails({id, onCloseMovie, onAddWatched, watched}) {
   // optional chaining cause there may exist no watchedMovie hence reading 
   // "userRating of undefined" error
 
-  useEffect(() => {
+  useEffect(() => {    
     const LoadMovieDetails = async () => {
       try {
         setIsLoading(true)
+
         const data = await fetch(`http://www.omdbapi.com/?apikey=${api_key}&i=${id}`)
         if(!data.ok){
           throw new Error("Network Error!")
         }     
         
         const jsonData = await data.json()
-        setMovie(jsonData)
-        
+        setMovie(jsonData)        
       } catch (error) {
         console.error(error)
       } finally {
         setIsLoading(false)
       }
-    }
 
+    }
+    
     LoadMovieDetails()
+    // // clean up function NOT needed cause I'm just fetching info 
+    // of a particular movie
   }, [id]) 
 
+  useEffect(() => {
+    if(!Title) return;
+    document.title = `MOVIE: ${Title}`
+
+    // clean up function (runs between renders) for this useEffect 
+    return () => {
+      document.title = "movie_pop"
+
+      console.log(Title)
+      // this will still get the previously destoyed movie title cause of closure;
+      // the ability of a function to remember all the variables that were present
+      // at the time and place the function was created
+    }
+  }, [Title])
+
+  // clean-up function
+  useEffect(() => {
+    const esc = (e) => {
+      if(e.code === "Escape") onCloseMovie()
+    }
+    document.addEventListener("keydown", esc)
+    return () => {document.removeEventListener("keydown", esc)}
+  }, [onCloseMovie])
+
+
   function addMovie() {
-    
     const newMovie = {
       imdbID, Title, Genre, Plot, Poster, Released, 
       Runtime, imdbRating, Actors, Director, userRating
@@ -265,7 +301,7 @@ function MovieDetails({id, onCloseMovie, onAddWatched, watched}) {
               <h2> {Title} </h2>
               <p> {Released} ▫ {Runtime}</p>
               <p> {Genre} </p>
-              <p> {imdbRating}⭐ IMDB Rating`</p>
+              <p> {imdbRating}⭐ IMDB Rating</p>
             </div>
           </header>
  
@@ -393,7 +429,7 @@ function Star({ maxRate = 5, initRate = 2, noRateIcon="🤍", rateIcon="💖", s
   const [tempRate, setTempRate] = useState("")
   
   return (
-    <div style={divBox}>
+    <div style={divBox} key={"3"}>
       <div style={starBox}>
         {Array.from({length: maxRate}, (_, ind) => (
           <span style={starStyle} 
